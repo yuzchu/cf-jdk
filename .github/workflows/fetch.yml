@@ -1,0 +1,26 @@
+name: Fetch JDK
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch all LTS JDKs (aarch64)
+        run: |
+          mkdir -p dist
+          for V in 8 11 17 21; do
+            F="jdk-${V}-linux-aarch64.tar.gz"
+            echo "=== JDK $V ==="
+            # 已发布过则跳过
+            if gh release view "jdk-${V}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "release jdk-${V} 已存在, 跳过"; continue
+            fi
+            curl -sL -o "$F" "https://api.adoptium.net/v3/binary/latest/${V}/ga/linux/aarch64/jdk/hotspot/normal/eclipse"
+            echo "$F: $(du -m $F | cut -f1)MB"
+            gh release create "jdk-${V}" "$F" --repo "$GITHUB_REPOSITORY" --title "JDK ${V} (linux-aarch64)" --notes "Temurin JDK ${V}, linux aarch64"
+            rm -f "$F"
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
